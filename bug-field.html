@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bug in Field Animation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Poppins', sans-serif;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            z-index: 100;
+            display: block;
+            pointer-events: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            font-size: 1.2rem;
+            font-weight: 500;
+            line-height: 1.6;
+        }
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            gap: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, #1E88E5, #1565C0);
+        }
+        #home-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            padding: 12px 24px;
+        }
+        #home-button:hover {
+            background: linear-gradient(135deg, #e53935, #c62828);
+        }
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+            margin: 0 10px;
+            min-width: 150px;
+        }
+        .slider-container label {
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        @media (max-width: 768px) {
+            #controls {
+                flex-direction: column;
+                bottom: 20px;
+                width: 90%;
+                max-width: 300px;
+                gap: 15px;
+            }
+            .slider-container {
+                width: 100%;
+                margin: 0;
+            }
+            button {
+                width: 100%;
+            }
+            #info {
+                font-size: 1rem;
+                padding: 0 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Bug in Field Animation<br>Watch the bugs explore and interact in the grassy field</div>
+    
+    <button id="home-button" onclick="window.location.href='examples-launcher.html'">← Back to Examples</button>
+    
+    <div id="controls">
+        <div class="slider-container">
+            <label for="speed">Speed: <span id="speed-value">1.0</span>x</label>
+            <input type="range" id="speed" min="0.1" max="3" value="1.0" step="0.1">
+        </div>
+        <button id="toggle-camera">Toggle Camera View</button>
+        <button id="toggle-day-night">Toggle Day/Night</button>
+        <button id="bug-pov" style="background: linear-gradient(135deg, #FF9800, #F57C00);">Red Bug's View</button>
+        <button id="yellow-bug-pov" style="background: linear-gradient(135deg, #FFC107, #FFB300);">Yellow Bug's View</button>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "./build/three.module.js",
+                "three/addons/": "./examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import Stats from 'three/addons/libs/stats.module.js';
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Sky blue background
+        
+        // Camera setup
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5, 10);
+        
+        // Top-down camera
+        const topCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        topCamera.position.set(0, 20, 0);
+        topCamera.lookAt(0, 0, 0);
+        
+        // Bug POV camera
+        const bugCamera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 1000);
+        
+        // Yellow bug POV camera
+        const yellowBugCamera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 1000);
+        
+        let activeCamera = camera;
+        
+        // Renderer setup
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+        
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 0, 0);
+        controls.update();
+        controls.enablePan = false;
+        controls.maxPolarAngle = Math.PI / 2;
+        
+        // Stats
+        const stats = new Stats();
+        document.body.appendChild(stats.dom);
+        
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0x404040, 1);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        directionalLight.position.set(50, 100, 50);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.near = 0.1;
+        directionalLight.shadow.camera.far = 500;
+        directionalLight.shadow.camera.right = 30;
+        directionalLight.shadow.camera.left = -30;
+        directionalLight.shadow.camera.top = 30;
+        directionalLight.shadow.camera.bottom = -30;
+        directionalLight.shadow.mapSize.width = 1024;
+        directionalLight.shadow.mapSize.height = 1024;
+        scene.add(directionalLight);
+        
+        // Ground (field)
+        const fieldSize = 50;
+        const groundGeometry = new THREE.PlaneGeometry(fieldSize, fieldSize, 32, 32);
+        
+        // Create a custom shader material for the grass
+        const groundMaterial = new THREE.MeshStandardMaterial({
+            color: 0x3a7e4d,
+            roughness: 0.8,
+            metalness: 0.2,
+            wireframe: false
+        });
+        
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        
+        // Create grass blades
+        function createGrass() {
+            const grassGroup = new THREE.Group();
+            
+            // Create individual grass blades
+            const bladesCount = 1000;
+            
+            for (let i = 0; i < bladesCount; i++) {
+                const height = Math.random() * 0.5 + 0.2;
+                const width = Math.random() * 0.1 + 0.05;
+                
+                const bladeGeometry = new THREE.ConeGeometry(width, height, 4, 1);
+                const bladeMaterial = new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(
+                        0.2 + Math.random() * 0.1,
+                        0.5 + Math.random() * 0.3,
+                        0.1 + Math.random() * 0.1
+                    ),
+                    side: THREE.DoubleSide
+                });
+                
+                const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
+                
+                // Position randomly on the field
+                const posX = (Math.random() - 0.5) * fieldSize * 0.95;
+                const posZ = (Math.random() - 0.5) * fieldSize * 0.95;
+                
+                blade.position.set(posX, height / 2, posZ);
+                
+                // Random rotation
+                blade.rotation.y = Math.random() * Math.PI;
+                blade.rotation.x = Math.random() * 0.2;
+                
+                blade.castShadow = true;
+                blade.receiveShadow = true;
+                
+                // Store original position for animation
+                blade.userData = {
+                    originalY: height / 2,
+                    originalRotX: blade.rotation.x,
+                    phase: Math.random() * Math.PI * 2
+                };
+                
+                grassGroup.add(blade);
+            }
+            
+            scene.add(grassGroup);
+            return grassGroup;
+        }
+        
+        const grassGroup = createGrass();
+        
+        // Create flowers
+        function createFlowers() {
+            const flowerGroup = new THREE.Group();
+            const flowerCount = 50;
+            
+            for (let i = 0; i < flowerCount; i++) {
+                // Stem
+                const stemHeight = Math.random() * 0.5 + 0.5;
+                const stemGeometry = new THREE.CylinderGeometry(0.02, 0.02, stemHeight, 8);
+                const stemMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x2e8b57,
+                    roughness: 0.8
+                });
+                
+                const stem = new THREE.Mesh(stemGeometry, stemMaterial);
+                
+                // Flower head
+                const petalCount = Math.floor(Math.random() * 3) + 5;
+                const flowerRadius = Math.random() * 0.15 + 0.1;
+                const flowerGeometry = new THREE.CircleGeometry(flowerRadius, petalCount);
+                
+                // Random flower color
+                const flowerColors = [
+                    0xffff00, // Yellow
+                    0xff6347, // Tomato
+                    0xda70d6, // Orchid
+                    0xff69b4, // Pink
+                    0xffa500  // Orange
+                ];
+                
+                const flowerMaterial = new THREE.MeshStandardMaterial({
+                    color: flowerColors[Math.floor(Math.random() * flowerColors.length)],
+                    roughness: 0.7,
+                    side: THREE.DoubleSide
+                });
+                
+                const flower = new THREE.Mesh(flowerGeometry, flowerMaterial);
+                flower.rotation.x = -Math.PI / 2;
+                flower.position.y = stemHeight / 2;
+                
+                // Center of flower
+                const centerGeometry = new THREE.SphereGeometry(flowerRadius * 0.3, 8, 8);
+                const centerMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x8b4513,
+                    roughness: 0.5
+                });
+                
+                const center = new THREE.Mesh(centerGeometry, centerMaterial);
+                center.position.z = 0.01;
+                flower.add(center);
+                
+                stem.add(flower);
+                
+                // Position randomly on the field
+                const posX = (Math.random() - 0.5) * fieldSize * 0.9;
+                const posZ = (Math.random() - 0.5) * fieldSize * 0.9;
+                
+                stem.position.set(posX, stemHeight / 2, posZ);
+                stem.castShadow = true;
+                
+                // Store original position for animation
+                stem.userData = {
+                    phase: Math.random() * Math.PI * 2
+                };
+                
+                flowerGroup.add(stem);
+            }
+            
+            scene.add(flowerGroup);
+            return flowerGroup;
+        }
+        
+        const flowerGroup = createFlowers();
+        
+        // Create bug
+        function createBug(isYellow = false) {
+            const bugGroup = new THREE.Group();
+            
+            // Bug body
+            const bodyGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+            const bodyMaterial = new THREE.MeshStandardMaterial({
+                color: isYellow ? 0xFFD700 : 0x000000,
+                roughness: 0.5,
+                metalness: 0.2
+            });
+            
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.castShadow = true;
+            bugGroup.add(body);
+            
+            // Bug head
+            const headGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+            const headMaterial = new THREE.MeshStandardMaterial({
+                color: isYellow ? 0xFFD700 : 0x000000,
+                roughness: 0.5,
+                metalness: 0.2
+            });
+            
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.z = 0.25;
+            head.castShadow = true;
+            bugGroup.add(head);
+            
+            // Add bug camera to the head
+            const povCamera = isYellow ? yellowBugCamera : bugCamera;
+            povCamera.position.set(0, 0.05, 0.05);
+            povCamera.rotation.y = Math.PI;
+            head.add(povCamera);
+            
+            // Bug eyes
+            const eyeGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+            const eyeMaterial = new THREE.MeshStandardMaterial({
+                color: isYellow ? 0x000000 : 0xff0000,
+                roughness: 0.3,
+                metalness: 0.5,
+                emissive: isYellow ? 0x000000 : 0x330000
+            });
+            
+            const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            leftEye.position.set(0.1, 0.08, 0.35);
+            bugGroup.add(leftEye);
+            
+            const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            rightEye.position.set(-0.1, 0.08, 0.35);
+            bugGroup.add(rightEye);
+            
+            // Bug legs
+            const legGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
+            const legMaterial = new THREE.MeshStandardMaterial({
+                color: isYellow ? 0x8B4513 : 0x000000,
+                roughness: 0.8
+            });
+            
+            // Create 6 legs (3 on each side)
+            const legPositions = [
+                { x: 0.2, z: 0.1 },
+                { x: 0.2, z: 0 },
+                { x: 0.2, z: -0.1 },
+                { x: -0.2, z: 0.1 },
+                { x: -0.2, z: 0 },
+                { x: -0.2, z: -0.1 }
+            ];
+            
+            legPositions.forEach((pos, index) => {
+                const leg = new THREE.Mesh(legGeometry, legMaterial);
+                leg.position.set(pos.x, -0.1, pos.z);
+                leg.rotation.z = pos.x > 0 ? Math.PI / 4 : -Math.PI / 4;
+                leg.castShadow = true;
+                
+                // Store original rotation for animation
+                leg.userData = {
+                    phase: index * Math.PI / 3,
+                    side: pos.x > 0 ? 1 : -1
+                };
+                
+                bugGroup.add(leg);
+            });
+            
+            // Antennae
+            const antennaGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.3, 8);
+            const antennaMaterial = new THREE.MeshStandardMaterial({
+                color: isYellow ? 0x8B4513 : 0x000000,
+                roughness: 0.8
+            });
+            
+            const leftAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+            leftAntenna.position.set(0.08, 0.15, 0.3);
+            leftAntenna.rotation.x = Math.PI / 4;
+            leftAntenna.rotation.z = Math.PI / 8;
+            bugGroup.add(leftAntenna);
+            
+            const rightAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+            rightAntenna.position.set(-0.08, 0.15, 0.3);
+            rightAntenna.rotation.x = Math.PI / 4;
+            rightAntenna.rotation.z = -Math.PI / 8;
+            bugGroup.add(rightAntenna);
+            
+            // Add spots to the bug (ladybug style)
+            if (!isYellow) {
+                const spotGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+                const spotMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xff0000,
+                    roughness: 0.5
+                });
+                
+                const spotPositions = [
+                    { x: 0.1, y: 0.15, z: 0 },
+                    { x: -0.1, y: 0.15, z: 0 },
+                    { x: 0, y: 0.15, z: -0.1 },
+                    { x: 0.1, y: 0.15, z: -0.15 },
+                    { x: -0.1, y: 0.15, z: -0.15 }
+                ];
+                
+                spotPositions.forEach(pos => {
+                    const spot = new THREE.Mesh(spotGeometry, spotMaterial);
+                    spot.position.set(pos.x, pos.y, pos.z);
+                    body.add(spot);
+                });
+            } else {
+                // Add stripes for the yellow bug
+                const stripeGeometry = new THREE.BoxGeometry(0.3, 0.02, 0.1);
+                const stripeMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x000000,
+                    roughness: 0.5
+                });
+                
+                const stripePositions = [
+                    { y: 0.15, z: 0 },
+                    { y: 0.15, z: -0.12 }
+                ];
+                
+                stripePositions.forEach(pos => {
+                    const stripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+                    stripe.position.set(0, pos.y, pos.z);
+                    body.add(stripe);
+                });
+            }
+            
+            // Position the bug
+            bugGroup.position.set(0, 0.3, 0);
+            bugGroup.rotation.y = Math.random() * Math.PI * 2;
+            
+            // Add collision properties
+            bugGroup.userData.collisionRadius = 0.4;
+            bugGroup.userData.isYellow = isYellow;
+            bugGroup.userData.velocity = new THREE.Vector3(0, 0, 0);
+            bugGroup.userData.colliding = false;
+            bugGroup.userData.collisionCooldown = 0;
+            
+            scene.add(bugGroup);
+            return bugGroup;
+        }
+        
+        const bug = createBug(false); // Red bug
+        const yellowBug = createBug(true); // Yellow bug
+        
+        // Create path for the red bug to follow
+        const pathPoints = [];
+        const pathRadius = fieldSize * 0.4;
+        const pathSegments = 10;
+        
+        for (let i = 0; i <= pathSegments; i++) {
+            const angle = (i / pathSegments) * Math.PI * 2;
+            const x = Math.cos(angle) * pathRadius * (0.8 + Math.random() * 0.4);
+            const z = Math.sin(angle) * pathRadius * (0.8 + Math.random() * 0.4);
+            pathPoints.push(new THREE.Vector3(x, 0.3, z));
+        }
+        
+        // Close the loop
+        pathPoints.push(pathPoints[0].clone());
+        
+        const pathCurve = new THREE.CatmullRomCurve3(pathPoints);
+        
+        // Create a different path for the yellow bug
+        const yellowPathPoints = [];
+        
+        for (let i = 0; i <= pathSegments; i++) {
+            const angle = (i / pathSegments) * Math.PI * 2;
+            // Make the yellow bug's path different and offset
+            const x = Math.sin(angle) * pathRadius * (0.7 + Math.random() * 0.4);
+            const z = Math.cos(angle) * pathRadius * (0.7 + Math.random() * 0.4);
+            yellowPathPoints.push(new THREE.Vector3(x, 0.3, z));
+        }
+        
+        // Close the loop
+        yellowPathPoints.push(yellowPathPoints[0].clone());
+        
+        const yellowPathCurve = new THREE.CatmullRomCurve3(yellowPathPoints);
+        
+        // Visualize the paths (for debugging)
+        const pathGeometry = new THREE.BufferGeometry().setFromPoints(
+            pathCurve.getPoints(100)
+        );
+        const pathMaterial = new THREE.LineBasicMaterial({ 
+            color: 0xff0000,
+            visible: false // Hide the path line
+        });
+        const pathLine = new THREE.Line(pathGeometry, pathMaterial);
+        scene.add(pathLine);
+        
+        const yellowPathGeometry = new THREE.BufferGeometry().setFromPoints(
+            yellowPathCurve.getPoints(100)
+        );
+        const yellowPathMaterial = new THREE.LineBasicMaterial({ 
+            color: 0xffff00,
+            visible: false // Hide the path line
+        });
+        const yellowPathLine = new THREE.Line(yellowPathGeometry, yellowPathMaterial);
+        scene.add(yellowPathLine);
+        
+        // Create small rocks
+        function createRocks() {
+            const rockGroup = new THREE.Group();
+            const rockCount = 30;
+            
+            for (let i = 0; i < rockCount; i++) {
+                const size = Math.random() * 0.5 + 0.2;
+                const rockGeometry = new THREE.DodecahedronGeometry(size, 0);
+                
+                // Distort the geometry a bit
+                const positions = rockGeometry.attributes.position;
+                
+                for (let j = 0; j < positions.count; j++) {
+                    const x = positions.getX(j);
+                    const y = positions.getY(j);
+                    const z = positions.getZ(j);
+                    
+                    positions.setXYZ(
+                        j,
+                        x + (Math.random() - 0.5) * 0.1,
+                        y + (Math.random() - 0.5) * 0.1,
+                        z + (Math.random() - 0.5) * 0.1
+                    );
+                }
+                
+                rockGeometry.computeVertexNormals();
+                
+                const rockMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x808080,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                
+                const rock = new THREE.Mesh(rockGeometry, rockMaterial);
+                
+                // Position randomly on the field
+                const posX = (Math.random() - 0.5) * fieldSize * 0.9;
+                const posZ = (Math.random() - 0.5) * fieldSize * 0.9;
+                
+                rock.position.set(posX, size / 2, posZ);
+                rock.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                
+                rock.castShadow = true;
+                rock.receiveShadow = true;
+                
+                rockGroup.add(rock);
+            }
+            
+            scene.add(rockGroup);
+            return rockGroup;
+        }
+        
+        const rocks = createRocks();
+        
+        // Animation variables
+        let bugProgress = 0;
+        let yellowBugProgress = 0.5; // Start at opposite position
+        let bugSpeed = 0.1;
+        let yellowBugSpeed = 0.1;
+        let isNight = false;
+        
+        // UI controls
+        const speedSlider = document.getElementById('speed');
+        const speedValue = document.getElementById('speed-value');
+        const toggleCameraButton = document.getElementById('toggle-camera');
+        const toggleDayNightButton = document.getElementById('toggle-day-night');
+        const bugPOVButton = document.getElementById('bug-pov');
+        const yellowBugPOVButton = document.getElementById('yellow-bug-pov');
+        
+        speedSlider.addEventListener('input', function() {
+            bugSpeed = parseFloat(this.value) * 0.1;
+            speedValue.textContent = this.value;
+        });
+        
+        toggleCameraButton.addEventListener('click', function() {
+            if (activeCamera === bugCamera || activeCamera === yellowBugCamera) {
+                // If we're in any bug view, switch to normal camera
+                activeCamera = camera;
+                bugPOVButton.style.background = 'linear-gradient(135deg, #FF9800, #F57C00)';
+                yellowBugPOVButton.style.background = 'linear-gradient(135deg, #FFC107, #FFB300)';
+            } else {
+                // Toggle between normal and top-down
+                activeCamera = activeCamera === camera ? topCamera : camera;
+            }
+        });
+        
+        toggleDayNightButton.addEventListener('click', function() {
+            isNight = !isNight;
+            
+            if (isNight) {
+                scene.background = new THREE.Color(0x0a1a2a); // Dark blue night sky
+                ambientLight.intensity = 0.2;
+                directionalLight.intensity = 0.1;
+                
+                // Add moon light
+                const moonLight = new THREE.PointLight(0xaaaaff, 1, 100);
+                moonLight.position.set(20, 30, 20);
+                scene.add(moonLight);
+                scene.userData.moonLight = moonLight;
+                
+                // Make bug eyes glow more
+                bug.children.forEach(child => {
+                    if (child.material && child.material.color.r > 0.5) {
+                        child.material.emissive.set(0xff0000);
+                        child.material.emissiveIntensity = 0.5;
+                    }
+                });
+            } else {
+                scene.background = new THREE.Color(0x87CEEB); // Sky blue
+                ambientLight.intensity = 1;
+                directionalLight.intensity = 1.5;
+                
+                // Remove moon light
+                if (scene.userData.moonLight) {
+                    scene.remove(scene.userData.moonLight);
+                    scene.userData.moonLight = null;
+                }
+                
+                // Reset bug eyes glow
+                bug.children.forEach(child => {
+                    if (child.material && child.material.color.r > 0.5) {
+                        child.material.emissive.set(0x330000);
+                        child.material.emissiveIntensity = 1;
+                    }
+                });
+            }
+        });
+        
+        bugPOVButton.addEventListener('click', function() {
+            if (activeCamera === bugCamera) {
+                // Switch back to normal camera
+                activeCamera = camera;
+                this.style.background = 'linear-gradient(135deg, #FF9800, #F57C00)';
+            } else {
+                // Switch to red bug POV
+                activeCamera = bugCamera;
+                this.style.background = 'linear-gradient(135deg, #E65100, #BF360C)';
+                // Reset yellow bug button
+                yellowBugPOVButton.style.background = 'linear-gradient(135deg, #FFC107, #FFB300)';
+            }
+        });
+        
+        yellowBugPOVButton.addEventListener('click', function() {
+            if (activeCamera === yellowBugCamera) {
+                // Switch back to normal camera
+                activeCamera = camera;
+                this.style.background = 'linear-gradient(135deg, #FFC107, #FFB300)';
+            } else {
+                // Switch to yellow bug POV
+                activeCamera = yellowBugCamera;
+                this.style.background = 'linear-gradient(135deg, #FF8F00, #FF6F00)';
+                // Reset red bug button
+                bugPOVButton.style.background = 'linear-gradient(135deg, #FF9800, #F57C00)';
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            
+            topCamera.aspect = window.innerWidth / window.innerHeight;
+            topCamera.updateProjectionMatrix();
+            
+            bugCamera.aspect = window.innerWidth / window.innerHeight;
+            bugCamera.updateProjectionMatrix();
+            
+            yellowBugCamera.aspect = window.innerWidth / window.innerHeight;
+            yellowBugCamera.updateProjectionMatrix();
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Check for collision between bugs
+        function checkBugCollision() {
+            const redBugPos = bug.position.clone();
+            const yellowBugPos = yellowBug.position.clone();
+            
+            // Calculate distance between bugs (only in x and z plane)
+            redBugPos.y = 0;
+            yellowBugPos.y = 0;
+            const distance = redBugPos.distanceTo(yellowBugPos);
+            
+            // Collision radius sum
+            const collisionThreshold = bug.userData.collisionRadius + yellowBug.userData.collisionRadius;
+            
+            // Check if bugs are colliding
+            if (distance < collisionThreshold) {
+                if (!bug.userData.colliding && !yellowBug.userData.colliding) {
+                    // Calculate collision response
+                    const collisionNormal = new THREE.Vector3()
+                        .subVectors(redBugPos, yellowBugPos)
+                        .normalize();
+                    
+                    // Apply "bounce" effect
+                    bug.userData.velocity.copy(collisionNormal.clone().multiplyScalar(0.05));
+                    yellowBug.userData.velocity.copy(collisionNormal.clone().multiplyScalar(-0.05));
+                    
+                    // Set collision flags and cooldown
+                    bug.userData.colliding = true;
+                    yellowBug.userData.colliding = true;
+                    bug.userData.collisionCooldown = 1.0; // 1 second cooldown
+                    yellowBug.userData.collisionCooldown = 1.0;
+                    
+                    // Create a small particle effect at collision point
+                    createCollisionEffect(redBugPos.clone().add(yellowBugPos).multiplyScalar(0.5));
+                }
+            }
+        }
+        
+        // Create a particle effect for collision
+        function createCollisionEffect(position) {
+            const particleCount = 20;
+            const particles = new THREE.Group();
+            
+            for (let i = 0; i < particleCount; i++) {
+                const size = Math.random() * 0.05 + 0.02;
+                const geometry = new THREE.SphereGeometry(size, 8, 8);
+                const material = new THREE.MeshBasicMaterial({
+                    color: Math.random() > 0.5 ? 0xff0000 : 0xffff00,
+                    transparent: true,
+                    opacity: 1
+                });
+                
+                const particle = new THREE.Mesh(geometry, material);
+                particle.position.copy(position);
+                particle.position.y += 0.3; // Slightly above ground
+                
+                // Random velocity
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 0.05 + 0.02;
+                particle.userData.velocity = new THREE.Vector3(
+                    Math.cos(angle) * speed,
+                    Math.random() * 0.1 + 0.05,
+                    Math.sin(angle) * speed
+                );
+                
+                particle.userData.lifetime = 1.0; // 1 second lifetime
+                
+                particles.add(particle);
+            }
+            
+            scene.add(particles);
+            scene.userData.collisionParticles = scene.userData.collisionParticles || [];
+            scene.userData.collisionParticles.push(particles);
+        }
+        
+        // Update collision particles
+        function updateCollisionParticles(delta) {
+            if (!scene.userData.collisionParticles) return;
+            
+            const particlesToRemove = [];
+            
+            scene.userData.collisionParticles.forEach(particleGroup => {
+                let allDead = true;
+                
+                particleGroup.children.forEach(particle => {
+                    // Update lifetime
+                    particle.userData.lifetime -= delta;
+                    
+                    if (particle.userData.lifetime > 0) {
+                        allDead = false;
+                        
+                        // Update position
+                        particle.position.add(particle.userData.velocity.clone().multiplyScalar(delta));
+                        
+                        // Apply gravity
+                        particle.userData.velocity.y -= 0.1 * delta;
+                        
+                        // Update opacity
+                        particle.material.opacity = particle.userData.lifetime;
+                    } else {
+                        particle.visible = false;
+                    }
+                });
+                
+                if (allDead) {
+                    particlesToRemove.push(particleGroup);
+                }
+            });
+            
+            // Remove dead particle groups
+            particlesToRemove.forEach(group => {
+                scene.remove(group);
+                const index = scene.userData.collisionParticles.indexOf(group);
+                if (index !== -1) {
+                    scene.userData.collisionParticles.splice(index, 1);
+                }
+            });
+        }
+        
+        // Animation loop
+        const clock = new THREE.Clock();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+            
+            // Check for collision between bugs
+            checkBugCollision();
+            
+            // Update collision particles
+            updateCollisionParticles(delta);
+            
+            // Update collision cooldown
+            if (bug.userData.collisionCooldown > 0) {
+                bug.userData.collisionCooldown -= delta;
+                if (bug.userData.collisionCooldown <= 0) {
+                    bug.userData.colliding = false;
+                }
+            }
+            
+            if (yellowBug.userData.collisionCooldown > 0) {
+                yellowBug.userData.collisionCooldown -= delta;
+                if (yellowBug.userData.collisionCooldown <= 0) {
+                    yellowBug.userData.colliding = false;
+                }
+            }
+            
+            // Move the red bug along the path
+            if (!bug.userData.colliding) {
+                bugProgress += bugSpeed * delta;
+                if (bugProgress > 1) bugProgress -= 1;
+                
+                const bugPosition = pathCurve.getPointAt(bugProgress);
+                bug.position.copy(bugPosition);
+                
+                // Make the bug face the direction of movement
+                const nextPosition = pathCurve.getPointAt((bugProgress + 0.01) % 1);
+                const bugDirection = nextPosition.clone().sub(bugPosition).normalize();
+                
+                if (bugDirection.length() > 0.001) {
+                    const targetRotation = Math.atan2(bugDirection.x, bugDirection.z);
+                    bug.rotation.y = targetRotation;
+                }
+            } else {
+                // Apply collision velocity
+                bug.position.add(bug.userData.velocity);
+                
+                // Dampen velocity
+                bug.userData.velocity.multiplyScalar(0.95);
+            }
+            
+            // Move the yellow bug along its path
+            if (!yellowBug.userData.colliding) {
+                yellowBugProgress += yellowBugSpeed * delta;
+                if (yellowBugProgress > 1) yellowBugProgress -= 1;
+                
+                const yellowBugPosition = yellowPathCurve.getPointAt(yellowBugProgress);
+                yellowBug.position.copy(yellowBugPosition);
+                
+                // Make the yellow bug face the direction of movement
+                const nextYellowPosition = yellowPathCurve.getPointAt((yellowBugProgress + 0.01) % 1);
+                const yellowBugDirection = nextYellowPosition.clone().sub(yellowBugPosition).normalize();
+                
+                if (yellowBugDirection.length() > 0.001) {
+                    const targetRotation = Math.atan2(yellowBugDirection.x, yellowBugDirection.z);
+                    yellowBug.rotation.y = targetRotation;
+                }
+            } else {
+                // Apply collision velocity
+                yellowBug.position.add(yellowBug.userData.velocity);
+                
+                // Dampen velocity
+                yellowBug.userData.velocity.multiplyScalar(0.95);
+            }
+            
+            // Add a slight bobbing motion to the bug POV cameras
+            if (activeCamera === bugCamera) {
+                bugCamera.position.y = 0.05 + Math.sin(time * 10) * 0.01;
+            }
+            
+            if (activeCamera === yellowBugCamera) {
+                yellowBugCamera.position.y = 0.05 + Math.sin(time * 10) * 0.01;
+            }
+            
+            // Animate bug legs
+            bug.children.forEach(child => {
+                if (child.userData && child.userData.hasOwnProperty('phase')) {
+                    const legPhase = child.userData.phase;
+                    const side = child.userData.side || 1;
+                    
+                    // Oscillate the leg rotation
+                    const legRotation = Math.sin(time * 10 + legPhase) * 0.3;
+                    child.rotation.z = (Math.PI / 4) * side + legRotation;
+                }
+            });
+            
+            // Animate yellow bug legs
+            yellowBug.children.forEach(child => {
+                if (child.userData && child.userData.hasOwnProperty('phase')) {
+                    const legPhase = child.userData.phase;
+                    const side = child.userData.side || 1;
+                    
+                    // Oscillate the leg rotation
+                    const legRotation = Math.sin(time * 10 + legPhase) * 0.3;
+                    child.rotation.z = (Math.PI / 4) * side + legRotation;
+                }
+            });
+            
+            // Animate grass blades
+            grassGroup.children.forEach(blade => {
+                if (blade.userData) {
+                    const { originalY, originalRotX, phase } = blade.userData;
+                    
+                    // Gentle swaying motion
+                    const swayAmount = 0.05;
+                    blade.rotation.x = originalRotX + Math.sin(time + phase) * swayAmount;
+                    blade.rotation.z = Math.sin(time * 0.5 + phase) * swayAmount;
+                }
+            });
+            
+            // Animate flowers
+            flowerGroup.children.forEach(stem => {
+                if (stem.userData) {
+                    const { phase } = stem.userData;
+                    
+                    // Gentle swaying motion
+                    const swayAmount = 0.03;
+                    stem.rotation.x = Math.sin(time * 0.5 + phase) * swayAmount;
+                    stem.rotation.z = Math.sin(time * 0.3 + phase) * swayAmount;
+                }
+            });
+            
+            // Update controls and stats
+            controls.update();
+            stats.update();
+            
+            // Render scene with active camera
+            renderer.render(scene, activeCamera);
+        }
+        
+        // Initialize
+        animate();
+    </script>
+</body>
+</html> 

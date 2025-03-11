@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Examples Launcher</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #2196F3;
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #666666;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 8px 16px rgba(0,0,0,0.1);
+            --border-radius: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: var(--shadow-sm);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .featured-demos {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 3rem;
+        }
+
+        .featured-demo {
+            background: linear-gradient(135deg, #43a047, #2e7d32);
+            color: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .featured-demo:hover {
+            transform: translateY(-5px);
+        }
+
+        .featured-demo.purple {
+            background: linear-gradient(135deg, #8e24aa, #6a1b9a);
+        }
+
+        .featured-demo.purple .featured-button {
+            color: #8e24aa;
+        }
+
+        .featured-demo h2 {
+            color: white;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            border: none;
+        }
+
+        .featured-demo p {
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .featured-button {
+            background-color: white;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .featured-button:hover {
+            background-color: #f8f9fa;
+            transform: scale(1.05);
+            box-shadow: var(--shadow-md);
+        }
+
+        .category {
+            background-color: var(--card-background);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-md);
+            transition: transform 0.3s ease;
+        }
+
+        .category:hover {
+            transform: translateY(-2px);
+        }
+
+        h2 {
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            font-weight: 600;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .description {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+
+        button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-align: left;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+        }
+
+        button:hover {
+            background-color: #1976D2;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        #iframe-container {
+            margin-top: 2rem;
+            width: 100%;
+            height: 700px;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            display: none;
+            box-shadow: var(--shadow-lg);
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .back-button {
+            background-color: #f44336;
+            margin-top: 1rem;
+            text-align: center;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .back-button:hover {
+            background-color: #d32f2f;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            header {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .featured-demo {
+                padding: 1.5rem;
+            }
+
+            .category {
+                padding: 1.5rem;
+            }
+
+            .buttons {
+                grid-template-columns: 1fr;
+            }
+
+            #iframe-container {
+                height: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Three.js Interactive Examples</h1>
+            <p class="subtitle">Explore a collection of interactive 3D visualizations and examples powered by Three.js</p>
+        </header>
+
+        <div class="featured-demos">
+            <div class="featured-demo">
+                <h2>Featured Demo: Castle Siege</h2>
+                <p>Experience an interactive medieval siege simulation! Launch projectiles, watch realistic physics, and see stunning visual effects as you attempt to breach the castle walls.</p>
+                <button class="featured-button" onclick="window.location.href='castle-siege.html'">Play Castle Siege →</button>
+            </div>
+            
+            <div class="featured-demo purple">
+                <h2>New! Bug in Field Animation</h2>
+                <p>Watch a ladybug explore a beautiful field with swaying grass and colorful flowers. Toggle between day and night, change camera views, and adjust the bug's speed.</p>
+                <button class="featured-button" onclick="window.location.href='bug-field.html'">Explore Bug Animation →</button>
+            </div>
+        </div>
+
+        <div id="examples-container">
+            <div class="category">
+                <h2>Physics & Cloth</h2>
+                <p class="description">Explore realistic physics simulations and dynamic cloth animations.</p>
+                <div class="buttons">
+                    <button onclick="loadExample('examples/physics_ammo_cloth.html')">Cloth Physics</button>
+                </div>
+            </div>
+
+            <div class="category">
+                <h2>Basic Geometry</h2>
+                <p class="description">Discover fundamental 3D shapes and text rendering capabilities.</p>
+                <div class="buttons">
+                    <button onclick="loadExample('examples/webgl_geometry_cube.html')">Cube</button>
+                    <button onclick="loadExample('examples/webgl_geometry_text.html')">Text</button>
+                    <button onclick="loadExample('examples/webgl_geometry_nurbs.html')">NURBS</button>
+                    <button onclick="loadExample('examples/webgl_geometry_colors.html')">Colors</button>
+                    <button onclick="loadExample('examples/webgl_geometry_csg.html')">CSG Operations</button>
+                </div>
+            </div>
+
+            <div class="category">
+                <h2>Animation</h2>
+                <p class="description">See various animation techniques in action, from simple keyframes to complex character animations.</p>
+                <div class="buttons">
+                    <button onclick="loadExample('examples/webgl_animation_keyframes.html')">Keyframes</button>
+                    <button onclick="loadExample('examples/webgl_animation_multiple.html')">Multiple Animations</button>
+                    <button onclick="loadExample('examples/webgl_animation_skinning_blending.html')">Skinning & Blending</button>
+                    <button onclick="loadExample('examples/webgl_animation_skinning_morph.html')">Skinning & Morph</button>
+                </div>
+            </div>
+
+            <div class="category">
+                <h2>Interactive</h2>
+                <p class="description">Try interactive demos with real-time user controls and dynamic elements.</p>
+                <div class="buttons">
+                    <button onclick="loadExample('examples/webgl_interactive_cubes.html')">Interactive Cubes</button>
+                    <button onclick="loadExample('examples/webgl_interactive_points.html')">Interactive Points</button>
+                    <button onclick="loadExample('examples/webgl_interactive_lines.html')">Interactive Lines</button>
+                    <button onclick="loadExample('examples/webgl_interactive_cubes_gpu.html')">GPU Cubes</button>
+                </div>
+            </div>
+
+            <div class="category">
+                <h2>Materials & Lighting</h2>
+                <p class="description">Experience different material types and lighting effects.</p>
+                <div class="buttons">
+                    <button onclick="loadExample('examples/webgl_materials_standard.html')">Standard Material</button>
+                    <button onclick="loadExample('examples/webgl_materials_physical.html')">Physical Material</button>
+                    <button onclick="loadExample('examples/webgl_lights_spotlight.html')">Spotlight</button>
+                    <button onclick="loadExample('examples/webgl_lights_pointlights.html')">Point Lights</button>
+                </div>
+            </div>
+
+            <div class="category">
+                <h2>Camera & Controls</h2>
+                <p class="description">Test different camera types and control mechanisms.</p>
+                <div class="buttons">
+                    <button onclick="loadExample('examples/webgl_camera.html')">Camera Types</button>
+                    <button onclick="loadExample('examples/webgl_camera_array.html')">Camera Array</button>
+                    <button onclick="loadExample('examples/webgl_controls_orbit.html')">Orbit Controls</button>
+                    <button onclick="loadExample('examples/webgl_controls_fly.html')">Fly Controls</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="iframe-container">
+            <iframe id="example-iframe" src=""></iframe>
+        </div>
+
+        <button id="back-button" class="back-button" onclick="showExamples()">← Back to Examples</button>
+    </div>
+
+    <script>
+        function loadExample(url) {
+            document.getElementById('examples-container').style.display = 'none';
+            document.getElementById('iframe-container').style.display = 'block';
+            document.getElementById('back-button').style.display = 'flex';
+            document.getElementById('example-iframe').src = url;
+        }
+
+        function showExamples() {
+            document.getElementById('examples-container').style.display = 'block';
+            document.getElementById('iframe-container').style.display = 'none';
+            document.getElementById('back-button').style.display = 'none';
+            document.getElementById('example-iframe').src = '';
+        }
+    </script>
+</body>
+</html> 
